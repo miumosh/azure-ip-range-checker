@@ -1,0 +1,117 @@
+name: update_azure_ip_range
+
+# on:
+#   schedule:
+#     # Every Tuesday 9:00 (JST)
+#     - cron: '0 0 * * 2'
+on: [ workflow_dispatch ]
+
+jobs:
+  CheckIpRange:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Git setting
+        run: |
+          git config --local user.email ${{secrets.USER_EMAIL}}
+          git config --local user.name ${{secrets.USER_NAME}}
+
+      - name: Set variables
+        run: |
+          # for notification
+          WEBHOOK_URL=${{secrets.WEBHOOK_URL}}
+          HEADER="Content-Type: application/json"
+
+          echo WEBHOOK_URL=${WEBHOOK_URL} >> $GITHUB_ENV
+          echo HEADER=${HEADER} >> $GITHUB_ENV
+
+          # for checking diffrence
+          IPRANGE_URL=`curl -sS https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519 | egrep -o 'https://download.*?\.json' | egrep -v 'https://download.*?\.json..*?\.json' | uniq`
+          LATEST_JSON=`echo ${IPRANGE_URL} | egrep -o [^/]+$` # ServiceTags_Public_yyyymmdd.json
+          CURRENT_JSON="ServiceTags_Public.json"
+
+          echo IPRANGE_URL=${IPRANGE_URL} >> $GITHUB_ENV
+          echo LATEST_JSON=${LATEST_JSON} >> $GITHUB_ENV
+          echo CURRENT_JSON=${CURRENT_JSON} >> $GITHUB_ENV
+
+      - name: Get latest azure ip range
+        run: |
+          curl ${{env.IPRANGE_URL}} > ${{env.LATEST_JSON}}
+
+      - name: Check difference
+        run: |
+          DIFF_EXIST=false
+          IFS=$'\n'
+          MSGS=()
+          NAMES=()
+          TAGS=(`cat check_list.json | jq -r '[.[].ServiceTags]|flatten|unique|.[]'`)
+
+          for TAG in "${TAGS[@]}"; do
+            old_num=`cat ${{env.CURRENT_JSON}} | jq '.values[] | select(.name == "'${TAG}'") | .properties.changeNumber'` # ex: 6
+            new_num=`cat ${{env.LATEST_JSON}}  | jq '.values[] | select(.name == "'${TAG}'") | .properties.changeNumber'` # ex: 7
+
+            if [ $old_num -lt $new_num ]; then
+              DIFF_EXIST=true
+              NAMES=(`cat check_list.json | jq -r --arg keyword $TAG '.[] | select(.ServiceTags[] == $keyword) | .name'`)
+              for NAME in ${NAMES[@]}; do
+                MSGS+=("${NAME} 案件 ${TAG} の IP レンジ に更新がありました。<br>")
+              done
+            fi
+          done
+
+          echo DIFF_EXIST=${DIFF_EXIST} >> $GITHUB_ENV
+          echo MSG=${MSGS[@]} >> $GITHUB_ENV
+
+      - name: Git working
+        run: |
+          if diff -q ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}} > /dev/null; then
+            echo "Nothing to do."
+          else
+            echo "Overwrite json."
+            mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
+            git add ${{env.CURRENT_JSON}}
+            git commit -m "merge ${{env.LATEST_JSON}}"
+            git push origin main
+          fi
+
+          ## This way is not work. Because github judge that the job has failed when standard error is 1.
+          # diff -s ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}} > /dev/null 2>&1
+          # if [ $? -eq 1 ]; then
+          #   echo "Overwrite json."
+          #   mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
+          #   git add ${{env.CURRENT_JSON}}
+          #   git commit -m "merge ${{env.LATEST_JSON}}"
+          #   git push origin main
+          # else
+          #   echo "Nothing to do."
+          # fi
+
+          ## This flow may not be necessary as it is normal for some IP range updates to occur with weekly updates.
+
+      - name: Send notification
+        run: |
+          if "${{env.DIFF_EXIST}}"; then
+            echo "Diff exist."
+
+            COMMIT_ID=`git log | head -n 1 | awk '{print $2}'`
+            COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${COMMIT_ID}"
+            LINK="[${COMMIT_URL}](${COMMIT_URL})"
+            MSG="${{env.MSG}}<br>${LINK}"
+            JSON_MSG="{\"text\": \"${MSG}\"}"
+
+            curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{env.WEBHOOK_URL}}"
+          else
+            echo "Diff not exist."
+          fi
+
+      - name: If failure
+        if: failure()
+        run: |
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          LINK="[${RUN_URL}](${RUN_URL})"
+          MSG="Github action's some work failed. Please check it out.<br>${LINK}"
+          JSON_MSG="{\"text\": \"${MSG}\"}"
+
+          curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{env.WEBHOOK_URL}}"
