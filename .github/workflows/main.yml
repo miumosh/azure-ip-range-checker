@@ -21,10 +21,7 @@ jobs:
       - name: Set variables
         run: |
           # for notification
-          WEBHOOK_URL=${{secrets.WEBHOOK_URL}}
           HEADER="Content-Type: application/json"
-
-          echo WEBHOOK_URL=${WEBHOOK_URL} >> $GITHUB_ENV
           echo HEADER=${HEADER} >> $GITHUB_ENV
 
           # for checking diffrence
@@ -101,7 +98,7 @@ jobs:
             MSG="${{env.MSG}}<br>${LINK}"
             JSON_MSG="{\"text\": \"${MSG}\"}"
 
-            curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{env.WEBHOOK_URL}}"
+            curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{secrets.WEBHOOK_URL}}"
           else
             echo "Diff not exist."
           fi
@@ -114,4 +111,4 @@ jobs:
           MSG="Github action's some work failed. Please check it out.<br>${LINK}"
           JSON_MSG="{\"text\": \"${MSG}\"}"
 
-          curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{env.WEBHOOK_URL}}"
+          curl -X POST -H "${{env.HEADER}}" -d "${JSON_MSG}" "${{secrets.WEBHOOK_URL}}"

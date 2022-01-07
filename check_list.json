@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "update": "yyyy/mm/dd",
+    "name": "System_01",
+    "ServiceTags": [
+      "Sql",
+      "Sql.EastAsia"
+    ]
+  },
+  {
+    "id": 2,
+    "update": "yyyy/mm/dd",
+    "name": "System_02",
+    "ServiceTags": [
+      "AzureFrontDoor.Frontend",
+      "AzureFrontDoor.Backend",
+      "Sql"
+    ]
+  }
+]
