@@ -63,29 +63,11 @@ jobs:
 
       - name: Git working
         run: |
-          if diff -q ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}} > /dev/null; then
-            echo "Nothing to do."
-          else
-            echo "Overwrite json."
-            mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
-            git add ${{env.CURRENT_JSON}}
-            git commit -m "merge ${{env.LATEST_JSON}}"
-            git push origin main
-          fi
-
-          ## This way is not work. Because github judge that the job has failed when standard error is 1.
-          # diff -s ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}} > /dev/null 2>&1
-          # if [ $? -eq 1 ]; then
-          #   echo "Overwrite json."
-          #   mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
-          #   git add ${{env.CURRENT_JSON}}
-          #   git commit -m "merge ${{env.LATEST_JSON}}"
-          #   git push origin main
-          # else
-          #   echo "Nothing to do."
-          # fi
-
-          ## This flow may not be necessary as it is normal for some IP range updates to occur with weekly updates.
+          echo "Overwrite json."
+          mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
+          git add ${{env.CURRENT_JSON}}
+          git commit -m "merge ${{env.LATEST_JSON}}"
+          git push origin main
 
       - name: Send notification
         run: |
