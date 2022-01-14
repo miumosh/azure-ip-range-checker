@@ -6,6 +6,7 @@ name: update_azure_ip_range
 #     - cron: '0 0 * * 2'
 on: [ workflow_dispatch ]
 
+
 jobs:
   CheckIpRange:
     runs-on: ubuntu-latest
