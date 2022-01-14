@@ -3,8 +3,8 @@ name: update_azure_ip_range
 on:
   schedule:
     # Every Tuesday 9:00 (JST)
-    - cron: '0 0 * * 2'
-# on: [ workflow_dispatch ]
+    # - cron: '0 0 * * 2'
+on: [ workflow_dispatch ]
 
 jobs:
   CheckIpRange:
