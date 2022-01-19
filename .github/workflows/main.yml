@@ -65,11 +65,15 @@ jobs:
 
       - name: Git working
         run: |
-          echo "Overwrite json."
-          mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
-          git add ${{env.CURRENT_JSON}}
-          git commit -m "merge ${{env.LATEST_JSON}}"
-          git push origin main
+          if diff -q ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}} > /dev/null; then
+            echo "Nothing to do."
+          else
+            echo "Overwrite json."
+            mv ${{env.LATEST_JSON}} ${{env.CURRENT_JSON}}
+            git add ${{env.CURRENT_JSON}}
+            git commit -m "merge ${{env.LATEST_JSON}}"
+            git push origin main
+          fi
 
       - name: Send notification
         run: |
