@@ -2,8 +2,8 @@ name: update_azure_ip_range
 
 on:
   schedule:
-    # Every Tuesday 8:00 (JST)
-    - cron: '0 23 * * 1'
+    # Every Tuesday 10:00 (JST)
+    - cron: '0 1 * * 2'
   workflow_dispatch:
 
 
